@@ -1,0 +1,8 @@
+transaction_id,date,category,amount
+1,2026-01-05,groceries,45.32
+2,2026-01-05,transport,12.00
+3,2026-01-06,groceries,23.95
+4,2026-01-06,utilities,98.50
+5,2026-01-07,groceries,17.20
+6,2026-01-07,transport,14.50
+7,2026-01-07,entertainment,60.00
