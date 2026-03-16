@@ -1,0 +1,21 @@
+AI-Driven Early Prediction of Cardiovascular Disease
+
+Input dataset: C:\Users\Dharanidhar Nikki\Desktop\Pesearch papaer\Data sets\cardio_train.csv\cardio_train.csv
+Original shape: (70000, 13)
+Rows after cleaning: 68608
+Rows removed by medical rules: 1392
+
+Top model on test ROC-AUC:
+- Gradient Boosting
+- Test Accuracy: 0.7351
+- Test Precision: 0.7573
+- Test Recall: 0.6838
+- Test F1: 0.7186
+- Test ROC-AUC: 0.8026
+
+Top permutation-importance features:
+- ap_hi
+- age_years
+- cholesterol
+- mean_arterial_pressure
+- bmi

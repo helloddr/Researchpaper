@@ -1,0 +1,20 @@
+Experiment Test 3: Full-Data Deep Optimization
+
+Train/Test split: 85/15
+Tuning method: full GridSearchCV on the complete training split
+
+Best overall experiment:
+- advanced_features_full_grid_tuned_gb
+- Accuracy: 0.7382
+- Precision: 0.7631
+- Recall: 0.6830
+- F1-score: 0.7208
+- ROC-AUC: 0.8052
+- CV ROC-AUC: 0.8010
+
+Best tuned Gradient Boosting parameters:
+- learning_rate: 0.03
+- max_depth: 4
+- min_samples_leaf: 40
+- n_estimators: 200
+- subsample: 0.8

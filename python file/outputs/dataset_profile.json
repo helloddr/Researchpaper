@@ -1,0 +1,59 @@
+{
+  "profile": {
+    "shape": [
+      70000,
+      13
+    ],
+    "columns": [
+      "id",
+      "age",
+      "gender",
+      "height",
+      "weight",
+      "ap_hi",
+      "ap_lo",
+      "cholesterol",
+      "gluc",
+      "smoke",
+      "alco",
+      "active",
+      "cardio"
+    ],
+    "missing_values": {
+      "id": 0,
+      "age": 0,
+      "gender": 0,
+      "height": 0,
+      "weight": 0,
+      "ap_hi": 0,
+      "ap_lo": 0,
+      "cholesterol": 0,
+      "gluc": 0,
+      "smoke": 0,
+      "alco": 0,
+      "active": 0,
+      "cardio": 0
+    },
+    "duplicate_rows": 0,
+    "target_distribution": {
+      "0": 35021,
+      "1": 34979
+    },
+    "invalid_value_counts": {
+      "height_below_120": 52,
+      "height_above_220": 1,
+      "weight_below_30": 7,
+      "weight_above_200": 0,
+      "ap_hi_below_80": 207,
+      "ap_hi_above_240": 40,
+      "ap_lo_below_40": 59,
+      "ap_lo_above_160": 966,
+      "ap_hi_less_than_ap_lo": 1236
+    }
+  },
+  "cleaning_summary": {
+    "initial_rows": 70000,
+    "rows_after_medical_rules": 68608,
+    "rows_removed_by_medical_rules": 1392
+  }
+}

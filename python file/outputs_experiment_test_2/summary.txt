@@ -1,0 +1,41 @@
+Experiment Test 2: Train/Test Split Comparison
+
+Split 70/30
+- Best model: Gradient Boosting
+- Accuracy: 0.7344
+- Precision: 0.7549
+- Recall: 0.6858
+- F1-score: 0.7187
+- ROC-AUC: 0.8020
+
+Split 75/25
+- Best model: Gradient Boosting
+- Accuracy: 0.7342
+- Precision: 0.7578
+- Recall: 0.6800
+- F1-score: 0.7168
+- ROC-AUC: 0.8014
+
+Split 80/20
+- Best model: Gradient Boosting
+- Accuracy: 0.7351
+- Precision: 0.7573
+- Recall: 0.6838
+- F1-score: 0.7186
+- ROC-AUC: 0.8026
+
+Split 85/15
+- Best model: Gradient Boosting
+- Accuracy: 0.7390
+- Precision: 0.7662
+- Recall: 0.6801
+- F1-score: 0.7206
+- ROC-AUC: 0.8040
+
+Split 90/10
+- Best model: Gradient Boosting
+- Accuracy: 0.7375
+- Precision: 0.7658
+- Recall: 0.6762
+- F1-score: 0.7182
+- ROC-AUC: 0.8017
