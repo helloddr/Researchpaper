@@ -6,10 +6,9 @@ This version is a true branching flowchart for the research work:
 - one branch for the external `UCI Heart Disease` validation pipeline
 - both branches merge into a comparison and final conclusion stage
 
-Generated files:
+Canonical saved file:
 
-- `paper_assets/research_work_flowchart.png`
-- `paper_assets/research_work_flowchart.svg`
+- `../Methodology/research_work_flowchart.png`
 
 The diagram uses:
 

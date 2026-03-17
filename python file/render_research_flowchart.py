@@ -16,9 +16,8 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import FancyArrowPatch, FancyBboxPatch, Polygon, Rectangle
 
 
-OUTPUT_DIR = ROOT / "paper_assets"
+OUTPUT_DIR = ROOT.parent / "Methodology"
 PNG_PATH = OUTPUT_DIR / "research_work_flowchart.png"
-SVG_PATH = OUTPUT_DIR / "research_work_flowchart.svg"
 
 
 def rounded_box(ax, center, width, height, text, face, edge="#0f172a", text_color="white", fontsize=11):
@@ -199,7 +198,6 @@ def render():
     ax.axis("off")
     fig.tight_layout()
     fig.savefig(PNG_PATH, dpi=300, bbox_inches="tight", facecolor=fig.get_facecolor())
-    fig.savefig(SVG_PATH, bbox_inches="tight", facecolor=fig.get_facecolor())
     plt.close(fig)
 
 
