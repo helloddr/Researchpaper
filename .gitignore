@@ -205,3 +205,6 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# Local research document kept outside version control
+python file/Research_Work_Algorithm_and_Flowchart.md
