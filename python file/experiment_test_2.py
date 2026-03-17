@@ -14,7 +14,7 @@ import pandas as pd
 from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score, roc_auc_score
 from sklearn.model_selection import train_test_split
 
-from cvd_pipeline import build_model_pipelines, clean_data, engineer_features, load_data
+from experiment_test_1 import build_model_pipelines, clean_data, engineer_features, load_data
 
 
 OUTPUT_DIR = ROOT / "python file" / "outputs_experiment_test_2"

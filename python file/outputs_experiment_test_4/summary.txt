@@ -1,0 +1,24 @@
+Experiment Test 4: UCI Heart Disease Deep Benchmark
+
+Input dataset: C:\Users\Dharanidhar Nikki\Desktop\Pesearch papaer\Data sets\UCI Heart Disease\processed_cleveland.data
+Rows after cleaning: 303
+Rows removed: 0
+Target distribution: {0: 164, 1: 139}
+Train/Test split: 85/15
+Tuning method: full GridSearchCV on the complete training split
+
+Best overall experiment:
+- uci_baseline_features_default_gb
+- Accuracy: 0.8043
+- Precision: 0.7308
+- Recall: 0.9048
+- F1-score: 0.8085
+- ROC-AUC: 0.9238
+- CV ROC-AUC: 0.8482
+
+Best tuned Gradient Boosting parameters:
+- learning_rate: 0.08
+- max_depth: 1
+- min_samples_leaf: 10
+- n_estimators: 50
+- subsample: 0.8

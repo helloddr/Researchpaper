@@ -39,7 +39,7 @@ from sklearn.svm import LinearSVC
 
 
 DATASET_PATH = ROOT / "Data sets" / "cardio_train.csv" / "cardio_train.csv"
-OUTPUT_DIR = ROOT / "python file" / "outputs"
+OUTPUT_DIR = ROOT / "python file" / "outputs_experiment_test_1"
 PLOTS_DIR = OUTPUT_DIR / "plots"
 TABLES_DIR = OUTPUT_DIR / "tables"
 MODELS_DIR = OUTPUT_DIR / "models"

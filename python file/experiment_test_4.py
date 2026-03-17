@@ -10,6 +10,10 @@ MPL_CONFIG_DIR.mkdir(parents=True, exist_ok=True)
 os.environ["MPLCONFIGDIR"] = str(MPL_CONFIG_DIR)
 os.environ["LOKY_MAX_CPU_COUNT"] = "1"
 
+import matplotlib
+
+matplotlib.use("Agg")
+
 import matplotlib.pyplot as plt
 import pandas as pd
 from sklearn.compose import ColumnTransformer
@@ -19,15 +23,30 @@ from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_sc
 from sklearn.model_selection import GridSearchCV, StratifiedKFold, train_test_split
 from sklearn.pipeline import Pipeline
 
-from experiment_test_1 import clean_data, engineer_features, load_data
 
-
-OUTPUT_DIR = ROOT / "python file" / "outputs_experiment_test_3"
+DATASET_PATH = ROOT / "Data sets" / "UCI Heart Disease" / "processed_cleveland.data"
+OUTPUT_DIR = ROOT / "python file" / "outputs_experiment_test_4"
 PLOTS_DIR = OUTPUT_DIR / "plots"
 TABLES_DIR = OUTPUT_DIR / "tables"
 
 TRAIN_RATIO = 0.85
 TEST_RATIO = 0.15
+COLUMN_NAMES = [
+    "age",
+    "sex",
+    "cp",
+    "trestbps",
+    "chol",
+    "fbs",
+    "restecg",
+    "thalach",
+    "exang",
+    "oldpeak",
+    "slope",
+    "ca",
+    "thal",
+    "target",
+]
 
 
 def ensure_dirs() -> None:
@@ -35,42 +54,68 @@ def ensure_dirs() -> None:
         path.mkdir(parents=True, exist_ok=True)
 
 
-def add_advanced_features(df: pd.DataFrame) -> pd.DataFrame:
-    featured = df.copy()
-    featured["bmi_overweight_flag"] = (featured["bmi"] >= 25).astype(int)
-    featured["bmi_obese_flag"] = (featured["bmi"] >= 30).astype(int)
-    featured["high_bp_flag"] = ((featured["ap_hi"] >= 140) | (featured["ap_lo"] >= 90)).astype(int)
-    featured["stage2_bp_flag"] = ((featured["ap_hi"] >= 160) | (featured["ap_lo"] >= 100)).astype(int)
-    featured["pulse_pressure_high_flag"] = (featured["pulse_pressure"] >= 60).astype(int)
-    featured["cholesterol_risk_flag"] = (featured["cholesterol"] > 1).astype(int)
-    featured["glucose_risk_flag"] = (featured["gluc"] > 1).astype(int)
-    featured["lifestyle_risk_score"] = featured["smoke"] + featured["alco"] + (1 - featured["active"])
-    featured["metabolic_risk_score"] = (
-        featured["cholesterol_risk_flag"]
-        + featured["glucose_risk_flag"]
-        + featured["bmi_overweight_flag"]
-        + featured["high_bp_flag"]
+def load_data() -> pd.DataFrame:
+    return pd.read_csv(DATASET_PATH, header=None, names=COLUMN_NAMES, na_values="?")
+
+
+def clean_data(df: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
+    cleaned = df.copy()
+    initial_rows = len(cleaned)
+    cleaned["target_binary"] = (cleaned["target"] > 0).astype(int)
+    cleaned = cleaned.drop(columns=["target"])
+
+    valid_mask = (
+        cleaned["age"].between(20, 100)
+        & cleaned["trestbps"].between(80, 250)
+        & cleaned["chol"].between(100, 700)
+        & cleaned["thalach"].between(60, 250)
+        & cleaned["oldpeak"].between(0, 10)
     )
-    featured["age_pressure_interaction"] = featured["age_years"] * featured["ap_hi"]
-    featured["age_bmi_interaction"] = featured["age_years"] * featured["bmi"]
-    featured["chol_gluc_interaction"] = featured["cholesterol"] * featured["gluc"]
-    featured["pressure_load"] = featured["ap_hi"] + featured["ap_lo"]
+    cleaned = cleaned.loc[valid_mask].copy()
+
+    summary = {
+        "initial_rows": initial_rows,
+        "rows_after_cleaning": int(len(cleaned)),
+        "rows_removed": int(initial_rows - len(cleaned)),
+        "missing_values": cleaned.isna().sum().to_dict(),
+        "target_distribution": cleaned["target_binary"].value_counts().sort_index().to_dict(),
+    }
+    return cleaned, summary
+
+
+def engineer_baseline_features(df: pd.DataFrame) -> pd.DataFrame:
+    featured = df.copy()
+    featured["age_group"] = pd.cut(
+        featured["age"],
+        bins=[0, 40, 50, 60, 120],
+        labels=[0, 1, 2, 3],
+        include_lowest=True,
+    ).astype(int)
+    featured["st_depression_flag"] = (featured["oldpeak"] >= 2.0).astype(int)
+    featured["high_bp_flag"] = (featured["trestbps"] >= 140).astype(int)
+    featured["high_chol_flag"] = (featured["chol"] >= 240).astype(int)
     return featured
 
 
-def prepare_datasets() -> tuple[pd.DataFrame, pd.DataFrame]:
-    raw_df = load_data()
-    cleaned_df, _ = clean_data(raw_df)
-    baseline_df = engineer_features(cleaned_df)
-    advanced_df = add_advanced_features(baseline_df)
-    return baseline_df, advanced_df
+def engineer_advanced_features(df: pd.DataFrame) -> pd.DataFrame:
+    featured = engineer_baseline_features(df)
+    featured["senior_flag"] = (featured["age"] >= 60).astype(int)
+    featured["low_thalach_flag"] = (featured["thalach"] < 120).astype(int)
+    featured["exercise_risk_score"] = featured["exang"] + featured["st_depression_flag"]
+    featured["vessel_risk_flag"] = featured["ca"].fillna(0).ge(1).astype(int)
+    featured["major_vessel_burden"] = featured["ca"].fillna(0)
+    featured["thal_risk_flag"] = featured["thal"].fillna(3).isin([6, 7]).astype(int)
+    featured["cp_exang_interaction"] = featured["cp"] * featured["exang"]
+    featured["age_oldpeak_interaction"] = featured["age"] * featured["oldpeak"]
+    featured["bp_chol_interaction"] = featured["trestbps"] * featured["chol"]
+    featured["rate_pressure_proxy"] = featured["trestbps"] * featured["thalach"]
+    featured["metabolic_pressure_score"] = featured["high_bp_flag"] + featured["high_chol_flag"] + featured["fbs"]
+    return featured
 
 
 def build_pipeline(feature_columns: list[str], params: dict | None = None) -> Pipeline:
     preprocessor = ColumnTransformer(
-        transformers=[
-            ("numeric", SimpleImputer(strategy="median"), feature_columns),
-        ]
+        transformers=[("numeric", SimpleImputer(strategy="median"), feature_columns)]
     )
     model = GradientBoostingClassifier(random_state=42, **(params or {}))
     return Pipeline(
@@ -82,10 +127,9 @@ def build_pipeline(feature_columns: list[str], params: dict | None = None) -> Pi
 
 
 def evaluate_fixed_pipeline(df: pd.DataFrame, params: dict | None = None) -> tuple[dict, dict[str, list[float]]]:
-    feature_columns = [col for col in df.columns if col != "cardio"]
+    feature_columns = [col for col in df.columns if col != "target_binary"]
     X = df[feature_columns]
-    y = df["cardio"]
-
+    y = df["target_binary"]
     X_train, X_test, y_train, y_test = train_test_split(
         X,
         y,
@@ -97,7 +141,7 @@ def evaluate_fixed_pipeline(df: pd.DataFrame, params: dict | None = None) -> tup
 
     pipeline = build_pipeline(feature_columns, params=params)
     cv = StratifiedKFold(n_splits=3, shuffle=True, random_state=42)
-    search_scores = []
+    cv_scores = []
     for train_idx, valid_idx in cv.split(X_train, y_train):
         X_cv_train = X_train.iloc[train_idx]
         X_cv_valid = X_train.iloc[valid_idx]
@@ -105,7 +149,7 @@ def evaluate_fixed_pipeline(df: pd.DataFrame, params: dict | None = None) -> tup
         y_cv_valid = y_train.iloc[valid_idx]
         pipeline.fit(X_cv_train, y_cv_train)
         y_cv_score = pipeline.predict_proba(X_cv_valid)[:, 1]
-        search_scores.append(roc_auc_score(y_cv_valid, y_cv_score))
+        cv_scores.append(roc_auc_score(y_cv_valid, y_cv_score))
 
     pipeline.fit(X_train, y_train)
     y_pred = pipeline.predict(X_test)
@@ -118,16 +162,15 @@ def evaluate_fixed_pipeline(df: pd.DataFrame, params: dict | None = None) -> tup
         "recall": recall_score(y_test, y_pred),
         "f1_score": f1_score(y_test, y_pred),
         "roc_auc": roc_auc_score(y_test, y_score),
-        "cv_roc_auc_mean": float(sum(search_scores) / len(search_scores)),
+        "cv_roc_auc_mean": float(sum(cv_scores) / len(cv_scores)),
     }
     return metrics, {"fpr": fpr.tolist(), "tpr": tpr.tolist()}
 
 
 def run_full_grid_search(df: pd.DataFrame) -> tuple[dict, pd.DataFrame]:
-    feature_columns = [col for col in df.columns if col != "cardio"]
+    feature_columns = [col for col in df.columns if col != "target_binary"]
     X = df[feature_columns]
-    y = df["cardio"]
-
+    y = df["target_binary"]
     X_train, X_test, y_train, y_test = train_test_split(
         X,
         y,
@@ -139,11 +182,11 @@ def run_full_grid_search(df: pd.DataFrame) -> tuple[dict, pd.DataFrame]:
 
     pipeline = build_pipeline(feature_columns)
     param_grid = {
-        "model__n_estimators": [100, 150, 200],
-        "model__learning_rate": [0.03, 0.05, 0.08],
-        "model__max_depth": [2, 3, 4],
+        "model__n_estimators": [50, 100, 150, 200],
+        "model__learning_rate": [0.03, 0.05, 0.08, 0.1],
+        "model__max_depth": [1, 2, 3],
         "model__subsample": [0.8, 1.0],
-        "model__min_samples_leaf": [20, 40],
+        "model__min_samples_leaf": [1, 3, 5, 10],
     }
     cv = StratifiedKFold(n_splits=3, shuffle=True, random_state=42)
     search = GridSearchCV(
@@ -159,7 +202,7 @@ def run_full_grid_search(df: pd.DataFrame) -> tuple[dict, pd.DataFrame]:
     search.fit(X_train, y_train)
 
     results_df = pd.DataFrame(search.cv_results_).sort_values(by="mean_test_score", ascending=False)
-    results_df.to_csv(TABLES_DIR / "gradient_boosting_tuning_results.csv", index=False)
+    results_df.to_csv(TABLES_DIR / "uci_gradient_boosting_tuning_results.csv", index=False)
 
     best_model = search.best_estimator_
     y_pred = best_model.predict(X_test)
@@ -181,18 +224,6 @@ def run_full_grid_search(df: pd.DataFrame) -> tuple[dict, pd.DataFrame]:
     return best_payload, results_df
 
 
-def save_comparison(baseline_metrics: dict, advanced_metrics: dict, tuned_payload: dict) -> pd.DataFrame:
-    comparison_df = pd.DataFrame(
-        [
-            {"experiment": "baseline_features_default_gb", **baseline_metrics},
-            {"experiment": "advanced_features_default_gb", **advanced_metrics},
-            {"experiment": "advanced_features_full_grid_tuned_gb", **tuned_payload["metrics"]},
-        ]
-    )
-    comparison_df.to_csv(TABLES_DIR / "optimization_comparison.csv", index=False)
-    return comparison_df
-
-
 def plot_roc_curves(curves: dict[str, dict[str, list[float]]]) -> None:
     fig, ax = plt.subplots(figsize=(8, 6))
     for label, curve in curves.items():
@@ -200,18 +231,37 @@ def plot_roc_curves(curves: dict[str, dict[str, list[float]]]) -> None:
     ax.plot([0, 1], [0, 1], linestyle="--", color="black", linewidth=1)
     ax.set_xlabel("False Positive Rate")
     ax.set_ylabel("True Positive Rate")
-    ax.set_title("Experiment Test 3 ROC Curve Comparison")
+    ax.set_title("Experiment Test 4 ROC Curve Comparison (UCI)")
     ax.legend()
     fig.tight_layout()
-    fig.savefig(PLOTS_DIR / "optimization_roc_curves.png", dpi=200)
+    fig.savefig(PLOTS_DIR / "uci_optimization_roc_curves.png", dpi=200)
     plt.close(fig)
 
 
-def write_summary(comparison_df: pd.DataFrame, tuned_payload: dict) -> None:
+def save_comparison(cleaning_summary: dict, baseline_metrics: dict, advanced_metrics: dict, tuned_payload: dict) -> pd.DataFrame:
+    with (OUTPUT_DIR / "uci_dataset_summary.json").open("w", encoding="utf-8") as fh:
+        json.dump(cleaning_summary, fh, indent=2)
+
+    comparison_df = pd.DataFrame(
+        [
+            {"experiment": "uci_baseline_features_default_gb", **baseline_metrics},
+            {"experiment": "uci_advanced_features_default_gb", **advanced_metrics},
+            {"experiment": "uci_advanced_features_full_grid_tuned_gb", **tuned_payload["metrics"]},
+        ]
+    )
+    comparison_df.to_csv(TABLES_DIR / "uci_optimization_comparison.csv", index=False)
+    return comparison_df
+
+
+def write_summary(cleaning_summary: dict, comparison_df: pd.DataFrame, tuned_payload: dict) -> None:
     best_row = comparison_df.sort_values(by="roc_auc", ascending=False).iloc[0]
     lines = [
-        "Experiment Test 3: Full-Data Deep Optimization",
+        "Experiment Test 4: UCI Heart Disease Deep Benchmark",
         "",
+        f"Input dataset: {DATASET_PATH}",
+        f"Rows after cleaning: {cleaning_summary['rows_after_cleaning']}",
+        f"Rows removed: {cleaning_summary['rows_removed']}",
+        f"Target distribution: {cleaning_summary['target_distribution']}",
         f"Train/Test split: {int(TRAIN_RATIO * 100)}/{int(TEST_RATIO * 100)}",
         "Tuning method: full GridSearchCV on the complete training split",
         "",
@@ -232,27 +282,30 @@ def write_summary(comparison_df: pd.DataFrame, tuned_payload: dict) -> None:
 
 def main() -> None:
     ensure_dirs()
-    print("Preparing baseline and advanced feature sets")
-    baseline_df, advanced_df = prepare_datasets()
+    print("Loading UCI Cleveland dataset")
+    raw_df = load_data()
+    cleaned_df, cleaning_summary = clean_data(raw_df)
+    baseline_df = engineer_baseline_features(cleaned_df)
+    advanced_df = engineer_advanced_features(cleaned_df)
 
-    print("Evaluating baseline Gradient Boosting with default parameters on full data split")
+    print("Evaluating baseline feature set with default Gradient Boosting")
     baseline_metrics, baseline_curve = evaluate_fixed_pipeline(baseline_df)
 
-    print("Evaluating advanced feature set with default Gradient Boosting on full data split")
+    print("Evaluating advanced feature set with default Gradient Boosting")
     advanced_metrics, advanced_curve = evaluate_fixed_pipeline(advanced_df)
 
-    print("Running full GridSearchCV tuning on the advanced feature set")
+    print("Running full GridSearchCV tuning on the advanced UCI feature set")
     tuned_payload, _ = run_full_grid_search(advanced_df)
 
-    comparison_df = save_comparison(baseline_metrics, advanced_metrics, tuned_payload)
+    comparison_df = save_comparison(cleaning_summary, baseline_metrics, advanced_metrics, tuned_payload)
     plot_roc_curves(
         {
-            "Baseline Features + Default GB": baseline_curve,
-            "Advanced Features + Default GB": advanced_curve,
-            "Advanced Features + Full Grid Tuned GB": tuned_payload["roc_curve"],
+            "UCI Baseline Features + Default GB": baseline_curve,
+            "UCI Advanced Features + Default GB": advanced_curve,
+            "UCI Advanced Features + Full Grid Tuned GB": tuned_payload["roc_curve"],
         }
     )
-    write_summary(comparison_df, tuned_payload)
+    write_summary(cleaning_summary, comparison_df, tuned_payload)
 
     with (OUTPUT_DIR / "best_tuned_model.json").open("w", encoding="utf-8") as fh:
         json.dump(tuned_payload, fh, indent=2)
